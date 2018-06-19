@@ -1,31 +1,29 @@
 package main
 
 import (
-	"html/template"
 	"log"
 	"net/http"
-	"path/filepath"
-	"sync"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/heroku/x/hmetrics/onload"
 )
 
-type templataHandler struct {
-	once     sync.Once
-	filename string
-	temp1    *template.Template
-}
-
-func (t *templataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	t.once.Do(func() {
-		t.temp1 =
-			template.Must(template.ParseFiles(filepath.Join("template",
-				t.filename)))
-	})
-	t.temp1.Execute(w, nil)
-}
-
 func main() {
-	http.Handle("/", &templataHandler{filename: "chat.html"})
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
 	}
+
+	router := gin.New()
+	router.Use(gin.Logger())
+	router.LoadHTMLGlob("templates/*.tmpl.html")
+	router.Static("/static", "static")
+
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.tmpl.html", nil)
+	})
+
+	router.Run(":" + port)
 }
